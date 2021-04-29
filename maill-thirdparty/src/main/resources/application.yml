@@ -1,0 +1,15 @@
+server:
+  port: 30000
+spring:
+  application:
+    name: nacos-maill-thirdParty
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+    alicloud:        #oss对象存储
+      access-key: LTAI4GJ6Y6afGbDeMwcRz3Da #oss对象存储  access-key 可以在头像 accesskey 管理里面找到  然后使用子 忘了就新增一个key
+      secret-key: cBgWwF1FP1QUTqgbB86rwIsOeDxk2x #oss对象存储  access-key 可以在头像 accesskey 管理里面找到  然后使用子 对应得 secret-key
+      oss:
+        endpoint: oss-cn-beijing.aliyuncs.com  #oss对象存储 要上传得对象存储得endpoint  选择外网能访问的    要使用oss  需要在项目中引种oss得stater 此项目在common包中
+        bucket-name: xymaill
