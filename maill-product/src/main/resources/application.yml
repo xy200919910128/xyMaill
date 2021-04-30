@@ -2,7 +2,7 @@ spring:
   datasource:
     username: root
     password: root
-    url: jdbc:mysql://192.168.56.10:3306/xymaill_pms
+    url: jdbc:mysql://192.168.56.5:3306/xymaill_pms?useUnicode=true&characterEncoding=UTF-8
     driver-class-name: com.mysql.jdbc.Driver
   application:
         name: nacos-maill-product
@@ -25,8 +25,8 @@ server:
 
 mybatis-plus:
   mapper-locations: classpath:/mapper/**/*.xml
-  configuration:
-      log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  #configuration:
+      #log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
   global-config:
     db-config:
       id-type: auto

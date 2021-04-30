@@ -2,7 +2,7 @@ spring:
   datasource:
     username: root
     password: root
-    url: jdbc:mysql://192.168.56.10:3306/xymaill_oms
+    url: jdbc:mysql://192.168.56.5:3306/xymaill_oms
     driver-class-name: com.mysql.jdbc.Driver
   application:
         name: nacos-maill-order
