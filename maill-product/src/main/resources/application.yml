@@ -16,7 +16,9 @@ spring:
       cache: false
       prefix: classpath:/templates/
       suffix: .html
-
+  redis:
+      host: 192.168.56.5
+      port: 6379
 server-url:
   nacos-user-service: http://maill-product
 

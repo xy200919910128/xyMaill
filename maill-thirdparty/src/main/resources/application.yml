@@ -8,8 +8,11 @@ spring:
       discovery:
         server-addr: 127.0.0.1:8848
     alicloud:        #oss对象存储
-      access-key: LTAI4GJ126Y6afGbDe44MwcRz3Da11 #oss对象存储  access-key 可以在头像 accesskey 管理里面找到  然后使用子 忘了就新增一个key
-      secret-key: cBgWwF1FP1QUTqg32bB86rw532IsOeDxk2x11 #oss对象存储  access-key 可以在头像 accesskey 管理里面找到  然后使用子 对应得 secret-key
+      access-key: LTAI5tCEpxsi68HVALad5o3G #oss对象存储  access-key 可以在头像 accesskey 管理里面找到  然后使用子 忘了就新增一个key
+      secret-key: vF2wEExIwEBeSqJjy78N2Px7ZA6kYo #oss对象存储  access-key 可以在头像 accesskey 管理里面找到  然后使用子 对应得 secret-key
       oss:
         endpoint: oss-cn-beijing.aliyuncs.com  #oss对象存储 要上传得对象存储得endpoint  选择外网能访问的    要使用oss  需要在项目中引种oss得stater 此项目在common包中
         bucket-name: xymaill
+
+
+#用户登录名称 xymaill@1994798319340492.onaliyun.com

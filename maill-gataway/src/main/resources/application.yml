@@ -47,6 +47,11 @@ spring:
                    - Path=/api/**     #将/api/**这个路径 转到xy-admin 项目中  后台项目的application name叫 xy-admin  然后 后台 还为项目起了一个项目名称 叫 xy_admin
                 filters:
                    - RewritePath=/api/(?<segment>.*),/xy_admin/$\{segment}    #重写
+              - id: host_front # 路由的id,没有规定规则但要求唯一,建议配合服务名
+             #匹配后提供服务的路由地址
+                uri: lb://nacos-maill-product   #lb一定是要写死的  表示启用gateway的负载均衡功能
+                predicates:    #此时通过网关访问的所有xymaill.com 或者xymaill.com子路径的 都会被映射到nacos-maill-product服务中
+                   - Host=**.xymaill.com,xymaill.com
 server:
     port: 88
 
