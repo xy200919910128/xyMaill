@@ -5,7 +5,12 @@ import com.alibaba.fastjson.TypeReference;
 import com.xy.maill.maillproduct.service.CategoryBrandRelationService;
 import com.xy.maill.maillproduct.vo.Catelog2Vo;
 import org.apache.commons.lang.StringUtils;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -37,6 +42,8 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryDao, CategoryEntity
     private CategoryBrandRelationService categoryBrandRelationService;
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
+    @Autowired
+    private RedissonClient redissonClient;
 
     @Override
     public PageUtils queryPage(Map<String, Object> params) {
@@ -82,6 +89,16 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryDao, CategoryEntity
 
     @Override
     @Transactional
+    //@CacheEvict(value = "category",key = "'getCatalogJson'")
+    //@CacheEvict(value = "category",allEntries = true)  这个注解会将category的值category这个分区下的所有内容都会删除
+
+    //业务规定  只要是同一个类型的数据  将value都设置成一个 可以设置为不同的 默认分区名就是前缀 配置中不指定前缀
+    //如果想用@cachePut会配合@CacheEvict （同时使用） 必须保证方法要返回数据而且要和定义的key的数据类型是一致的 他会把最新更改的数据重新放入缓存中
+    //常规数据 （读多写少，一致性要求不高）：都可以使用springcache  添加过期时间就可以了  省略了 大段的写法； 特殊数据 需要特殊处理（可能自己需要加分布式的读写锁）{spring cache 只在读模式加了本地锁 写模式没加锁 }
+    @Caching(evict = {
+            @CacheEvict(value = "category",key = "'getCatalogJson'"),
+            @CacheEvict(value = "category",key = "'getCatLevel1'")
+    })
     public void updateDetail(CategoryEntity category) {
         this.updateById(category);
         if(StringUtils.isNotEmpty(category.getName())){
@@ -90,6 +107,11 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryDao, CategoryEntity
     }
 
     @Override
+    @Cacheable(value = "category",key = "'getCatLevel1'")//当前方法需要缓存 如果缓存中有 方法不需要调用 否则会执行方法 查询数据库并放入缓存  每一个数据都要指定一个名字（规定按照业务类型存放）
+    //这个缓存的默认行为：1 key 是自动生成的：SimpleKey [] 2，缓存的序列化默认使用jdk序列化 3，默认的超时时间是永不过期
+    //自定义：需要设置缓存的key key属性指定 （spel表达式） 如果是字符串 需要在双引号写单引号 如果是表达式 需要"#root.method.name"
+    // 设置序列化（以json）
+    // 设置过期时间 :在配置文件中修改ttl
     public List<CategoryEntity> getCatLevel1() {
         QueryWrapper<CategoryEntity> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("parent_cid","0");
@@ -102,17 +124,22 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryDao, CategoryEntity
         return selectList;
     }
 
+    @Override
+    @Cacheable(value = "category" ,key = "'getCatalogJson'")
+    public Map<String, List<Catelog2Vo>> getCatalogJson(){
+        Map<String, List<Catelog2Vo>> map = getCatalogJsonFromDb();
+        return map;
+    }
+
     //TODO 使用新版springboot 会产生 堆外内存溢出异常：OutOfDirectMemoryError
     //因为新版的springboot 会使用lettuce作为操作redis的客户端 这是lettuce 的bug
     //解决方案：
     //升级 lettuce（目前尚未解决此bug） 2使用jedis
-
-    @Override
-    public Map<String, List<Catelog2Vo>> getCatalogJson(){
+    private Map<String, List<Catelog2Vo>> getCatalogJsonRedisTemplate(){
         ValueOperations<String, String> stringStringValueOperations = stringRedisTemplate.opsForValue();
         String catJson = stringStringValueOperations.get("catJson");
         if(StringUtils.isEmpty(catJson)){
-            Map<String, List<Catelog2Vo>> map = getCatalogJsonFromDbFromfenbushiLock();
+            Map<String, List<Catelog2Vo>> map = getCatalogJsonFromDbFromRedissonLock();
             return map;
         }
         //可以将jsonStr转为任意对象的方法（反序列化）
@@ -183,6 +210,25 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryDao, CategoryEntity
                 return getCatalogJsonFromDbFromfenbushiLock();
             }
     }
+
+
+    //缓存中的数据和数据库的数据如何保持一致？ // 2种：双写模式（数据库和缓存都写）和失效模式（数据库更新 缓存删除 让下次读缓存先读数据库）
+    //从数据库查询并封装分类数据（使用redisson锁）
+    private Map<String, List<Catelog2Vo>> getCatalogJsonFromDbFromRedissonLock() {
+        ValueOperations<String, String> stringStringValueOperations = stringRedisTemplate.opsForValue();
+            Map<String, List<Catelog2Vo>> dataFromDb;
+            //锁的粒度 越细 越好
+            //锁的粒度：缓存具体的某个数据：11号商品 product_11_lock 这样涉及
+            RLock rLock = redissonClient.getLock("catJsonLock");
+            rLock.lock();
+            try{
+                dataFromDb = getAndSetCacheCatListMapFromDb(stringStringValueOperations);
+            }finally {
+                rLock.unlock();
+            }
+            return  dataFromDb;
+    }
+
 
     private Map<String, List<Catelog2Vo>> getAndSetCacheCatListMapFromDb(ValueOperations<String, String> stringStringValueOperations) {
         String catJson = stringStringValueOperations.get("catJson");
