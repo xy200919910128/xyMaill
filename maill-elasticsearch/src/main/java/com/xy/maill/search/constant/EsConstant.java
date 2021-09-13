@@ -6,9 +6,6 @@ package com.xy.maill.search.constant;
  * DESCRIPTION:
  **/
 public class EsConstant {
-
-    public static final String PRODUCT_INDEX = "xymalll_product";
-
+    public static final String PRODUCT_INDEX = "xy_products";
     public static final Integer PRODUCT_PAGE_SIZE = 3;
-
 }
